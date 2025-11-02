@@ -1,0 +1,40 @@
+// drizzle-orm schema for employee_master
+import { mysqlTable, int, varchar, text, tinyint } from 'drizzle-orm/mysql-core';
+
+export const employeeMaster = mysqlTable('employee_master', {
+  id: int('id').primaryKey().autoincrement(),
+  emp_id: varchar('emp_id', { length: 15 }),
+  first_name: varchar('first_name', { length: 30 }),
+  last_name: varchar('last_name', { length: 30 }),
+  off_email: varchar('off_email', { length: 60 }),
+  password: varchar('password', { length: 50 }),
+  DispOrder: int('DispOrder'),
+  status: int('status'),
+  dob: varchar('dob', { length: 50, nullable: true }),
+  doj: varchar('doj', { length: 13 }),
+  gender: varchar('gender', { length: 1 }),
+  blood_group: varchar('blood_group', { length: 10 }),
+  per_email_1: varchar('per_email_1', { length: 60 }),
+  per_email_2: varchar('per_email_2', { length: 60 }),
+  mobile_1: varchar('mobile_1', { length: 14 }),
+  mobile_2: varchar('mobile_2', { length: 14 }),
+  address_1: text('address_1'),
+  address_2: text('address_2'),
+  photo: varchar('photo', { length: 60 }),
+  resume: varchar('resume', { length: 60 }),
+  father_name: varchar('father_name', { length: 50 }),
+  mother_name: varchar('mother_name', { length: 50 }),
+  pan_no: varchar('pan_no', { length: 50 }),
+  pan_name: varchar('pan_name', { length: 50 }),
+  pass_no: varchar('pass_no', { length: 50 }),
+  bank_no: varchar('bank_no', { length: 50 }),
+  created: varchar('created', { length: 50, nullable: true }),
+  stage1: int('stage1'),
+  stage2: int('stage2'),
+  stage3: int('stage3'),
+  stage4: int('stage4'),
+  stage5: int('stage5'),
+  place: tinyint('place'),
+  is_superadmin: tinyint('is_superadmin').default(0), // 0 = false, 1 = true
+
+});

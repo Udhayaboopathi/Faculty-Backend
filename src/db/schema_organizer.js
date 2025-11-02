@@ -1,0 +1,33 @@
+import {
+    date,
+    int,
+    mysqlTable,
+    text,
+    varchar,
+} from "drizzle-orm/mysql-core";
+
+export const organizer = mysqlTable("organizer", {
+  id: int("Id").autoincrement().primaryKey(),
+  empId: varchar("emp_id", { length: 10 }).notNull(),
+  tRole: varchar("T_role", { length: 30 }).notNull(),
+  oType: varchar("O_type", { length: 30 }).notNull(),
+  title: text("Title").notNull(),
+  dateFrom: date("Date_f").notNull(),
+  dateTo: date("Date_t").notNull(),
+  level: varchar("Level", { length: 20 }).notNull(),
+  role: varchar("Role", { length: 30 }).notNull(),
+  org: varchar("Org", { length: 40 }).notNull(),
+  orgAddress: text("Org_Address").notNull(),
+  local: int("local"),
+  outstation: int("outstation"),
+  amount: int("Amount"),
+  letter: varchar("letter", { length: 300 }),
+  sanctioned: int("Sanctioned"),
+  utilized: int("Utilized"),
+  uc: varchar("uc", { length: 300 }),
+  report: varchar("report", { length: 300 }),
+  photo1: varchar("photo1", { length: 300 }),
+  photo2: varchar("photo2", { length: 300 }),
+  photo3: varchar("photo3", { length: 300 }),
+  photo4: varchar("photo4", { length: 300 }),
+});
