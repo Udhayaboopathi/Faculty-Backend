@@ -1,5 +1,7 @@
 FROM node:20-alpine AS builder
 
+RUN apk update && apk add --no-cache curl
+
 RUN addgroup -S periyaruniversity && adduser -S periyaruniversity -G periyaruniversity
 
 WORKDIR /home/periyaruniversity/Faculty-Backend
