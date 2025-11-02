@@ -45,7 +45,7 @@ pipeline {
       echo "Pipeline finished at ${new Date().format("yyyy-MM-dd HH:mm:ss")}"
     }
     success {
-      echo "✅ Build succeeded! Image pushed: ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest"
+      echo "✅ Build succeeded! Image pushed:${DOCKER_IMAGE}:latest"
     }
     failure {
       echo "❌ Build failed!"
