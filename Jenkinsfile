@@ -33,12 +33,12 @@ pipeline {
     //   }
     // }
 
-//     stage('Push') {
-//       steps {
-//         sh 'docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:latest'
-//       }
-//     }
-//   }
+    // stage('Push') {
+    //   steps {
+    //     sh 'docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:latest'
+    //   }
+    // }
+  }
 
   post {
     always {
@@ -51,5 +51,4 @@ pipeline {
       echo "❌ Build failed!"
     }
   }
-// # build finished check now....
 }
