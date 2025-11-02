@@ -74,6 +74,13 @@ import {
   updateProject,
 } from "./src/pages/project.js";
 
+import {
+  createPatent,
+  deletePatent,
+  getPatent,
+  updatePatent,
+} from "./src/pages/patent.js";
+
 import consultancy from "./src/pages/consultancy.js";
 import webpages from "./src/pages/webpages.js";
 
@@ -300,6 +307,12 @@ app.get("/dashboard/proposals", authMiddleware, getProjects);
 app.post("/dashboard/proposals", authMiddleware, createProject);
 app.put("/dashboard/proposals/:id", authMiddleware, updateProject);
 app.delete("/dashboard/proposals/:id", authMiddleware, deleteProject);
+
+// Patent routes
+app.get("/dashboard/patent", authMiddleware, getPatent);
+app.post("/dashboard/patent", authMiddleware, createPatent);
+app.put("/dashboard/patent/:id", authMiddleware, updatePatent);
+app.delete("/dashboard/patent/:id", authMiddleware, deletePatent);
 
 // Pay routes
 app.get("/dashboard/pay", authMiddleware, payController.getPayDetails);
