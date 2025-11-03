@@ -32,11 +32,12 @@ import {
 } from "./src/pages/profile.js";
 
 import {
+  bulkDeletePublications,
   createPublication,
   deletePublication,
   editPublication,
   getPublication,
-  uploadPublication,
+  uploadPublication
 } from "./src/pages/publication.js";
 
 import {
@@ -301,6 +302,8 @@ app.post(
   upload.single('bibtex'),
   uploadPublication
 );
+
+app.post("/dashboard/publication/bulk", authMiddleware, bulkDeletePublications);
 
 // Project routes
 app.get("/dashboard/proposals", authMiddleware, getProjects);

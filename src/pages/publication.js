@@ -69,6 +69,7 @@ export async function createPublication(req, res) {
       DOI: DOI ? String(DOI).slice(0, 200) : null,
       Webpage: Webpage ? String(Webpage).slice(0, 1000) : null,
       Paper: Paper ? String(Paper).slice(0, 300) : null,
+      UPDATED: new Date(),
     };
 
     // Validate required fields
@@ -422,5 +423,59 @@ export async function uploadPublication(req, res) {
       error: e.message || String(e),
       stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
     });
+  }
+}
+
+export async function bulkDeletePublications(req, res) {
+  try {
+    const current_user = req.user;
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "Missing or invalid 'ids' array" });
+    }
+
+    const validIds = ids
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+
+    if (validIds.length === 0) {
+      return res.status(400).json({ error: "No valid IDs provided" });
+    }
+
+    for (const id of validIds) {
+      const existing = await db
+        .select()
+        .from(publication)
+        .where(eq(publication.Id, id))
+        .limit(1);
+
+      if (!existing.length) {
+        return res.status(404).json({ error: `Publication with ID ${id} not found` });
+      }
+
+      const ownerId = String(existing[0].emp_id);
+      const requesterId = String(current_user.EMP_ID);
+
+      if (ownerId !== requesterId) {
+        return res.status(403).json({ error: `Forbidden to delete publication with ID ${id}` });
+      }
+    }
+
+    // Delete each id individually (some Drizzle versions / drivers don't expose `.in` on column objects)
+    let deletedCount = 0;
+    for (const delId of validIds) {
+      const delRes = await db.delete(publication).where(eq(publication.Id, delId));
+      // Different drivers return affected counts under different property names
+      const count = delRes?.numDeletedRows ?? delRes?.rowCount ?? delRes?.affectedRows ?? 0;
+      deletedCount += Number(count);
+    }
+
+    return res.json({
+      success: true,
+      deletedCount,
+    });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
   }
 }
