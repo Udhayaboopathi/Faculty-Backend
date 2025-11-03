@@ -47,11 +47,11 @@ export async function applyLeave(req, res) {
 
 // Staff edits their leave application
 export async function editLeave(req, res) {
-  const { id, LTYPE, ROLE_ID, LFROM, LTO, INCHARGE, RESON, TOTAL } = req.body;
+  const { id } = req.body;
   const EMP_ID = req.user.EMP_ID;
 
-  if (!id || !LTYPE || !EMP_ID || !LFROM || !LTO) {
-    return res.status(400).json({ error: "Missing required fields" });
+  if (!id) {
+    return res.status(400).json({ error: "Missing leave id" });
   }
 
   try {
@@ -73,17 +73,37 @@ export async function editLeave(req, res) {
         .json({ error: "Cannot edit approved or denied leave" });
     }
 
-    // Update leave details
+    // Build updates from provided body fields (only allowed keys)
+    const allowed = [
+      "LTYPE",
+      "ROLE_ID",
+      "LFROM",
+      "LTO",
+      "INCHARGE",
+      "RESON",
+      "TOTAL",
+      "Daytype",
+      "Session",
+      "Timing",
+      "cancel",
+      "cancel_reason",
+    ];
+
+    const updates = {};
+    for (const key of allowed) {
+      if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+        updates[key] = req.body[key];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No updatable fields provided" });
+    }
+
+    // Perform update
     await db
       .update(leave)
-      .set({
-        LTYPE,
-        LFROM,
-        LTO,
-        INCHARGE,
-        RESON,
-        TOTAL,
-      })
+      .set(updates)
       .where(eq(leave.id, id));
 
     res.json({ success: true, message: "Leave updated successfully" });
@@ -150,9 +170,10 @@ export async function cancelLeave(req, res) {
         .json({ error: "Cannot cancel approved or denied leave" });
     }
 
-    // Delete the leave record
+    // Update the leave to set cancel = 1
     await db
-      .delete(leave)
+      .update(leave)
+      .set({ cancel: 1 })
       .where(eq(leave.id, id));
 
     res.json({ success: true, message: "Leave cancelled successfully" });
@@ -328,7 +349,7 @@ export async function getAdminLeaves(req, res) {
           })
           .from(leave)
           .leftJoin(employeeMaster, eq(leave.EMP_ID, employeeMaster.id)) // Join with employeeMaster
-          .where(eq(leave.EMP_ID, staff.emp_id));
+          .where(and(eq(leave.EMP_ID, staff.emp_id)), ne(leave.EMP_ID, emp_id)); // Exclude the admin themselves
 
         return [
           {
