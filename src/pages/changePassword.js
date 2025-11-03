@@ -11,6 +11,8 @@ export async function changePassword(req, res) {
   try {
     var user = await db.select().from(employeeMaster).where(eq(employeeMaster.off_email, req.user.email)).limit(1);
     user = user[0];
+    if(!user) return res.status(404).json({ error: "User not found" });
+    if(user.emp_id !== req.user.EMP_ID) return res.status(403).json({ error: "You are not authorized to change this password" });
     const off_email = user.off_email;
     if (user.password !== oldPassword) return res.status(401).json({ error: "Old password is incorrect" });
     await db.update(employeeMaster).set({ password: newPassword }).where(eq(employeeMaster.off_email, off_email));

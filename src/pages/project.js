@@ -57,7 +57,18 @@ export async function updateProject(req, res) {
       return res.status(400).json({ success: false, message: "Invalid project id" });
     }
 
-    const body = req.body ?? {};
+    const { Title, Agency, Amount, Status, DFrom, DTo } = req.body ?? {};
+
+    // Helper: normalize input to YYYY-MM-DD or undefined
+    function toDateOnlyString(value) {
+      if (value == null || value === "") return undefined;
+      const d = value instanceof Date ? value : new Date(String(value));
+      if (!isFinite(d.getTime())) return undefined;
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
 
     // Fetch existing & ownership check
     const existing = await db
@@ -76,46 +87,84 @@ export async function updateProject(req, res) {
       return res.status(403).json({ success: false, message: "Forbidden: Not your project" });
     }
 
-    // Extract allowed fields (partial update supported)
-    const {
-      Title,   // -> title
-      Agency,  // -> FundAgency
-      Amount,  // -> budget
-      Status,  // -> pstatus
-      DFrom,   // -> durationfrom
-      DTo      // -> durationto
-    } = body;
-
-    // Build update object conditionally
+    // Build update object conditionally (accepts both schema keys and legacy aliases)
     /** @type {Partial<typeof proposal.$inferInsert>} */
     const updateData = {};
+    const body = req.body ?? {};
 
-    if (Title !== undefined) updateData.title = String(Title).trim();
-    if (Agency !== undefined) updateData.FundAgency = String(Agency).trim();
-
-    if (Amount !== undefined) {
-      const n = Number(Amount);
-      if (!Number.isFinite(n)) {
-        return res.status(400).json({ success: false, message: "Amount must be a valid number" });
+    // Accept common aliases from older clients
+    const aliases = {
+      Title: "title",
+      Agency: "FundAgency",
+      Amount: "budget",
+      Status: "pstatus",
+      DFrom: "durationfrom",
+      DTo: "durationto",
+    };
+    for (const [alias, real] of Object.entries(aliases)) {
+      if (body[alias] !== undefined && body[real] === undefined) {
+        body[real] = body[alias];
       }
-      updateData.budget = n;
     }
 
-    if (Status !== undefined) updateData.pstatus = String(Status).trim();
+    // Field groups by expected type
+    const dateFields = ["applydate", "sanctiondate", "durationfrom", "durationto"];
+    const intFields = [
+      "budget",
+      "duration",
+      "samt",
+      "ryear1",
+      "ryear2",
+      "ryear3",
+      "ryear4",
+      "ryear5",
+      "uyear1",
+      "uyear2",
+      "uyear3",
+      "uyear4",
+      "uyear5",
+    ];
+    const stringFields = [
+      "refno",
+      "proposaltype",
+      "title",
+      "principal",
+      "coprincipal",
+      "fund",
+      "FundAgency",
+      "brief",
+      "uc1",
+      "uc2",
+      "uc3",
+      "uc4",
+      "uc5",
+      "Publications",
+      "pstatus",
+      "report",
+    ];
 
-    // Dates: normalize to YYYY-MM-DD if provided
-    const dFromStr = DFrom !== undefined ? toDateOnlyString(DFrom) : undefined;
-    const dToStr   = DTo   !== undefined ? toDateOnlyString(DTo)   : undefined;
-
-    if (DFrom !== undefined && !dFromStr) {
-      return res.status(400).json({ success: false, message: "Invalid DFrom" });
+    // Normalize and validate date fields
+    for (const f of dateFields) {
+      if (body[f] !== undefined) {
+        const v = toDateOnlyString(body[f]);
+        if (!v) return res.status(400).json({ success: false, message: `Invalid ${f}` });
+        updateData[f] = v;
+      }
     }
-    if (DTo !== undefined && !dToStr) {
-      return res.status(400).json({ success: false, message: "Invalid DTo" });
+
+    // Normalize and validate integer fields
+    for (const f of intFields) {
+      if (body[f] !== undefined) {
+        const n = Number(body[f]);
+        if (!Number.isFinite(n)) return res.status(400).json({ success: false, message: `${f} must be a valid number` });
+        updateData[f] = n;
+      }
     }
 
-    if (dFromStr !== undefined) updateData.durationfrom = dFromStr;
-    if (dToStr !== undefined)   updateData.durationto = dToStr;
+    // Strings and text
+    for (const f of stringFields) {
+      if (body[f] !== undefined) updateData[f] = String(body[f]).trim();
+    }
 
     if (updateData.durationfrom && updateData.durationto) {
       if (new Date(updateData.durationfrom) > new Date(updateData.durationto)) {
@@ -141,18 +190,37 @@ export async function updateProject(req, res) {
       result?.affectedRows ??
       (typeof result === "number" ? result : undefined);
 
-    if (!affected) {
+    // Treat 0 affectedRows as successful "no changes" (MySQL returns 0 if values are identical)
+    const responseData = {
+      id: projectId,
+      ...existing[0],
+      ...updateData,
+    };
+
+    if (typeof affected === "number") {
+      if (affected === 0) {
+        return res.json({
+          success: true,
+          message: "No changes made to the project",
+          data: responseData,
+        });
+      }
+      if (affected > 0) {
+        return res.json({
+          success: true,
+          message: "Project updated successfully",
+          data: responseData,
+        });
+      }
+      // negative or unexpected numeric value
       return res.status(500).json({ success: false, message: "Failed to update project" });
     }
 
+    // If driver didn't return a numeric affected count, assume success
     return res.json({
       success: true,
       message: "Project updated successfully",
-      data: {
-        id: projectId,
-        ...existing[0],
-        ...updateData,
-      },
+      data: responseData,
     });
   } catch (e) {
     console.error(e);

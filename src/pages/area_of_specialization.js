@@ -55,6 +55,10 @@ export async function deleteAreaofSpecialization(req, res) {
         .json({ error: "Unauthorized to delete this area" });
     }
 
+    if (existingArea.length === 0) {
+      return res.status(404).json({ error: "Area not found" });
+    }
+
     await db.delete(area).where(eq(area.Sno, Number(id)));
 
     res.json({

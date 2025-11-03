@@ -42,35 +42,33 @@ export async function createPublication(req, res) {
       Paper,
     } = req.body;
 
-    // Validate and cast data to match schema
+    // Basic sanitization / casting
+    const empId = current_user && current_user.EMP_ID ? String(current_user.EMP_ID).slice(0, 10) : null;
     const validatedData = {
-      emp_id: String(current_user.EMP_ID).slice(0, 10),
-      P_type: ent.type ? String(ent.type).slice(0, 30) : "misc",
-      Title: cleanedTitle ?? "Untitled",
-      P_Name: pname ? String(pname) : "Unknown",
-      P_Level: (plevel ?? "International").slice(0, 20),
+      emp_id: empId,
+      P_type: P_type ? String(P_type).slice(0, 30) : "misc",
+      Title: Title ? String(Title).slice(0, 300) : "Untitled",
+      P_Name: P_Name ? String(P_Name).slice(0, 150) : "Unknown",
+      P_Level: P_Level ? String(P_Level).slice(0, 20) : "International",
 
-      Author_1: authors[0] ? String(authors[0]).slice(0, 30) : "Unknown",
-      Author_2: authors[1] ?? null, // <-- changed to null
-      Author_3: authors[2] ?? null, // <-- changed to null
+      Author_1: Author_1 ? String(Author_1).slice(0, 30) : "Unknown",
+      Author_2: Author_2 ? String(Author_2).slice(0, 30) : null,
+      Author_3: Author_3 ? String(Author_3).slice(0, 30) : null,
 
-      Volume: volume ?? 0,
-      Issue: issue ?? 0,
-      Page_from: page_from ?? 0,
-      Page_to: page_to ?? 0,
-      Impact_F: impact_f ?? 0.0,
+      Volume: typeof Volume !== "undefined" && Volume !== null ? Number(Volume) : 0,
+      Issue: typeof Issue !== "undefined" && Issue !== null ? Number(Issue) : 0,
+      Page_from: typeof Page_from !== "undefined" && Page_from !== null ? Number(Page_from) : 0,
+      Page_to: typeof Page_to !== "undefined" && Page_to !== null ? Number(Page_to) : 0,
+      Impact_F: typeof Impact_F !== "undefined" && Impact_F !== null ? Number(Impact_F) : 0.0,
 
-      Indexing: indexing ?? null, // <-- changed to null
-      Publisher: publisherCandidate ? String(publisherCandidate) : "Unknown",
-      P_year: year ?? new Date().getFullYear(),
-      P_month: pmonth ?? null, // <-- changed to null
+      Indexing: Indexing && String(Indexing).trim().length ? String(Indexing).slice(0, 80) : null,
+      Publisher: Publisher ? String(Publisher).slice(0, 200) : "Unknown",
+      P_year: typeof P_year !== "undefined" && P_year !== null ? Number(P_year) : new Date().getFullYear(),
+      P_month: typeof P_month !== "undefined" && P_month !== null ? Number(P_month) : null,
 
-      DOI: f.doi ? String(f.doi) : null, // <-- changed to null
-      Webpage: f.url ? String(f.url) : null, // <-- changed to null
-      Paper:
-        f.citationkey || f.key || cleanedTitle
-          ? String(f.citationkey || f.key || cleanedTitle).slice(0, 300)
-          : null, // <-- prefer null over undefined
+      DOI: DOI ? String(DOI).slice(0, 200) : null,
+      Webpage: Webpage ? String(Webpage).slice(0, 1000) : null,
+      Paper: Paper ? String(Paper).slice(0, 300) : null,
     };
 
     // Validate required fields

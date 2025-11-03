@@ -62,7 +62,7 @@ export async function editLeave(req, res) {
       .where(eq(leave.id, id))
       .limit(1);
 
-    if (!existingLeave.length) {
+    if (!existingLeave.length || parseInt(existingLeave[0].EMP_ID) !== parseInt(EMP_ID)) {
       return res.status(404).json({ error: "Leave not found or unauthorized" });
     }
 

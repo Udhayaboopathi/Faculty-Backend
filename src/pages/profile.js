@@ -260,7 +260,7 @@ export async function deleteQualification(req, res) {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
 
-  const { qualificationId } = req.body || {};
+  const qualificationId = req.params.id;
 
   try {
     if (!qualificationId) {
@@ -279,7 +279,7 @@ export async function deleteQualification(req, res) {
       )
       .limit(1);
 
-    if (!qualification.length) {
+    if (!qualification.length || Number(qualification[0].emp_id) !== current_user.EMP_ID) {
       return res
         .status(404)
         .json({
