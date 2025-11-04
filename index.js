@@ -28,6 +28,7 @@ import {
   getResearchSupervision,
   updateExperience,
   updateProfile,
+  updateProfilePhoto,
   updateQualification
 } from "./src/pages/profile.js";
 
@@ -220,6 +221,9 @@ app.put("/auth/changepassword", authMiddleware, changePassword);
 // Profile (Personal Information)
 app.get("/dashboard/profile", authMiddleware, getProfile);
 app.put("/dashboard/profile", authMiddleware, updateProfile);
+app.put("/dashboard/profile/photo", authMiddleware,
+  upload.single('photo'),
+  updateProfilePhoto);
 
 // Webpages
 app.get("/dashboard/webpages", authMiddleware, webpages.getWebpages);

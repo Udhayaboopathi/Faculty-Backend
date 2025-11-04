@@ -146,29 +146,34 @@ export async function updateProject(req, res) {
     // Normalize and validate date fields
     for (const f of dateFields) {
       if (body[f] !== undefined) {
-        const v = toDateOnlyString(body[f]);
-        if (!v) return res.status(400).json({ success: false, message: `Invalid ${f}` });
-        updateData[f] = v;
+      // Only normalize when a non-empty value is provided
+      if (body[f] === null || body[f] === "") continue;
+      const v = toDateOnlyString(body[f]);
+      if (!v) return res.status(400).json({ success: false, message: `Invalid ${f}` });
+      updateData[f] = v;
       }
     }
 
-    // Normalize and validate integer fields
+    // Normalize and validate integer fields (only when value provided and not empty)
     for (const f of intFields) {
-      if (body[f] !== undefined) {
-        const n = Number(body[f]);
-        if (!Number.isFinite(n)) return res.status(400).json({ success: false, message: `${f} must be a valid number` });
-        updateData[f] = n;
+      if (body[f] !== undefined && body[f] !== null && body[f] !== "") {
+      const n = Number(body[f]);
+      if (!Number.isFinite(n)) return res.status(400).json({ success: false, message: `${f} must be a valid number` });
+      updateData[f] = n;
       }
     }
 
-    // Strings and text
+    // Strings and text (only set when non-empty after trimming)
     for (const f of stringFields) {
-      if (body[f] !== undefined) updateData[f] = String(body[f]).trim();
+      if (body[f] !== undefined && body[f] !== null) {
+      const s = String(body[f]).trim();
+      if (s !== "") updateData[f] = s;
+      }
     }
 
     if (updateData.durationfrom && updateData.durationto) {
       if (new Date(updateData.durationfrom) > new Date(updateData.durationto)) {
-        return res.status(400).json({ success: false, message: "DFrom must be before DTo" });
+      return res.status(400).json({ success: false, message: "DFrom must be before DTo" });
       }
     }
 

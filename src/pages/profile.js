@@ -418,3 +418,120 @@ export async function deleteExperience(req, res) {
       .json({ success: false, message: e?.message || "Server error" });
   }
 }
+
+export async function updateProfilePhoto(req, res) {
+  const current_user = req.user;
+  if (!current_user?.EMP_ID) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+
+  try {
+    // dynamic imports to stay compatible with ESM file
+    const fsModule = await import("fs");
+    const fs = fsModule.promises || fsModule;
+    const pathModule = await import("path");
+    const path = pathModule.default || pathModule;
+
+    const uploadsDir = path.resolve("uploads/emp_photo");
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    // Fetch current profile early to obtain first_name for default filename and old photo
+    const profileRow = await db
+      .select()
+      .from(employeeMaster)
+      .where(eq(employeeMaster.id, current_user.EMP_ID))
+      .limit(1);
+
+    const oldFileName = profileRow?.[0]?.photo;
+
+    // determine a sanitized base name: first_name_empId_date
+    const rawFirstName =
+      (profileRow?.[0]?.first_name) ||
+      current_user.first_name ||
+      `emp${current_user.EMP_ID}`;
+    const sanitize = (s) =>
+      String(s)
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_\-]/g, "");
+    const baseName = `${sanitize(rawFirstName)}_${current_user.EMP_ID}_${Date.now()}`;
+
+    let newFileName;
+
+    // helper to get extension from original name or mimetype
+    const extFrom = (originalName, mime) => {
+      if (originalName) {
+        const ext = path.extname(originalName);
+        if (ext) return ext;
+      }
+      if (mime) {
+        const parts = mime.split("/");
+        if (parts[1]) return "." + parts[1].split("+")[0];
+      }
+      return ".png";
+    };
+
+    // 1) If file uploaded via multer (req.file)
+    if (req.file) {
+      const file = req.file;
+      const srcPath = file.path || (file.destination ? path.join(file.destination, file.filename) : null);
+
+      const ext = extFrom(file.originalname, file.mimetype);
+      newFileName = `${baseName}${ext}`;
+
+      const destPath = path.join(uploadsDir, newFileName);
+
+      // move/rename file to uploadsDir with our default name
+      if (srcPath && path.resolve(srcPath) !== path.resolve(destPath)) {
+        await fs.rename(srcPath, destPath).catch(async (err) => {
+          // if rename fails (cross-device), fallback to copy+unlink
+          if (err.code === "EXDEV" || err.code === "EPERM") {
+            await fs.copyFile(srcPath, destPath);
+            await fs.unlink(srcPath).catch(() => {});
+          } else {
+            throw err;
+          }
+        });
+      } else if (!srcPath) {
+        // if multer didn't provide a path, try to use buffer (e.g., multer.memoryStorage)
+        if (file.buffer) {
+          await fs.writeFile(destPath, file.buffer);
+        } else {
+          return res.status(400).json({ success: false, message: "Uploaded file missing path/buffer" });
+        }
+      }
+    }
+    // 2) If photo sent as base64 string in req.body.photo
+    else if (req.body?.photo && typeof req.body.photo === "string") {
+      const dataUrlMatch = req.body.photo.match(/^data:(.+);base64,(.+)$/);
+      const base64 = dataUrlMatch ? dataUrlMatch[2] : req.body.photo;
+      const mime = dataUrlMatch ? dataUrlMatch[1] : "image/png";
+      const ext = mime.split("/").pop().replace("+xml", "");
+      newFileName = `${baseName}.${ext}`;
+      const destPath = path.join(uploadsDir, newFileName);
+      await fs.writeFile(destPath, Buffer.from(base64, "base64"));
+    } else {
+      return res.status(400).json({ success: false, message: "No photo provided" });
+    }
+
+    // Update DB with new filename
+    await db
+      .update(employeeMaster)
+      .set({ photo: newFileName })
+      .where(eq(employeeMaster.id, current_user.EMP_ID));
+
+    // Remove old file if it exists and is different from new file
+    if (oldFileName && oldFileName !== newFileName) {
+      const oldPath = path.join(uploadsDir, String(oldFileName));
+      await fs.unlink(oldPath).catch(() => {
+        // ignore errors (file might not exist)
+      });
+    }
+
+    return res.json({ success: true, message: "Profile photo updated successfully", photo: newFileName });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ success: false, message: e?.message || "Server error" });
+  }
+}
