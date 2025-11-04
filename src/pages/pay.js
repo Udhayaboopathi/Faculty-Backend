@@ -167,7 +167,8 @@ export const postPayDetails = async (req, res) => {
         message: "DA percentage not configured in the system",
       });
     }
-    const da_percent = daPercentage[0].da_percentage || 0;
+    // use the actual column name `da_percent`
+    const da_percent = daPercentage[0].da_percent || 0;
     const {
       empId, // employee ID to post for
       month,
@@ -229,8 +230,13 @@ export const postPayDetails = async (req, res) => {
         .status(400)
         .json({ success: false, message: "month is required" });
 
-    if (basic*da_percent/100 !== da) {
-      return res.status(400).json({ success: false, message: `DA should be ${da_percent}% of Basic` });
+    // Validate DA allowing for small rounding/format differences
+    const expectedDA = Math.round(N(basic) * da_percent / 100);
+    if (Math.abs(expectedDA - N(da)) > 0.5) {
+      return res.status(400).json({
+        success: false,
+        message: `DA should be ${da_percent}% of Basic. Expected: ${expectedDA}, Got: ${N(da)}`,
+      });
     }
 
     // Get payband (bank_no) from employeeMaster
@@ -411,18 +417,19 @@ export const bulkUploadPay = async (req, res) => {
           success: false,
           empId,
           month,
-          message: "empId and month required",
+          message: "empId and month are required",
         });
         continue;
       }
 
-      // Validate DA calculation
-      if (N(basic) * da_percent / 100 !== N(da)) {
+      // Validate DA calculation (allow small rounding differences)
+      const expectedDA = Math.round(N(basic) * da_percent / 100);
+      if (Math.abs(expectedDA - N(da)) > 0.5) {
         results.push({
           success: false,
           empId,
           month,
-          message: `DA should be ${da_percent}% of Basic. Expected: ${N(basic) * da_percent / 100}, Got: ${N(da)}`,
+          message: `DA should be ${da_percent}% of Basic. Expected: ${expectedDA}, Got: ${N(da)}`,
         });
         continue;
       }
