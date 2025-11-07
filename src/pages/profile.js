@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db/connection.js";
+import { departmentMaster } from "../db/schema_department_master.js";
 import { experienceMaster } from "../db/schema_experience_master.js";
 import { qualificationMaster } from "../db/schema_qualification_master.js";
 import { researchSupervision } from "../db/schema_research_supervision.js";
@@ -33,6 +34,13 @@ export async function getProfile(req, res) {
       .where(eq(experienceMaster.emp_id, current_user.EMP_ID));
 
     profile_data.experiences = experiences;
+
+    const dept_name = await db
+      .select()
+      .from(departmentMaster)
+      .where(eq(departmentMaster.id, current_user.dept_id))
+      .limit(1);
+    profile_data.profile.dept_name = dept_name[0]?.department || "";
 
     res.json({ success: true, profile_data });
   } catch (e) {
@@ -118,7 +126,7 @@ export async function updateQualification(req, res) {
       for (const f of allowedQual) {
         if (Object.prototype.hasOwnProperty.call(qual, f)) {
           const value = qual[f];
-          patch[f] = value === '' ? null : value;
+          patch[f] = value === "" ? null : value;
         }
       }
       // Only update if qual.id is present and belongs to current user
@@ -132,9 +140,14 @@ export async function updateQualification(req, res) {
           );
       }
     }
-    return res.json({ success: true, message: "Qualifications updated successfully" });
+    return res.json({
+      success: true,
+      message: "Qualifications updated successfully",
+    });
   } else {
-    return res.status(400).json({ success: false, message: "Invalid qualifications array" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid qualifications array" });
   }
 }
 
@@ -171,17 +184,20 @@ export async function updateExperience(req, res) {
           .update(experienceMaster)
           .set(patch)
           .where(eq(experienceMaster.id, Number(exp.id)));
-      }
-      else{
+      } else {
         await db.insert(experienceMaster).values(patch);
       }
     }
-    return res.json({ success: true, message: "Experiences updated successfully" });
+    return res.json({
+      success: true,
+      message: "Experiences updated successfully",
+    });
   } else {
-    return res.status(400).json({ success: false, message: "Invalid experiences array" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid experiences array" });
   }
 }
-
 
 export async function getResearchSupervision(req, res) {
   try {
@@ -234,12 +250,10 @@ export async function addQualification(req, res) {
           message: "Qualification added successfully",
         });
       } else {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No valid qualification fields provided",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No valid qualification fields provided",
+        });
       }
     }
 
@@ -279,13 +293,14 @@ export async function deleteQualification(req, res) {
       )
       .limit(1);
 
-    if (!qualification.length || Number(qualification[0].emp_id) !== current_user.EMP_ID) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Qualification not found or not authorized",
-        });
+    if (
+      !qualification.length ||
+      Number(qualification[0].emp_id) !== current_user.EMP_ID
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: "Qualification not found or not authorized",
+      });
     }
 
     // Delete the qualification
@@ -345,12 +360,10 @@ export async function addExperience(req, res) {
           message: "Experience added successfully",
         });
       } else {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No valid experience fields provided",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No valid experience fields provided",
+        });
       }
     }
 
@@ -391,12 +404,10 @@ export async function deleteExperience(req, res) {
       .limit(1);
 
     if (!experience.length) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Experience not found or not authorized",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Experience not found or not authorized",
+      });
     }
 
     // Delete the experience
@@ -446,7 +457,7 @@ export async function updateProfilePhoto(req, res) {
 
     // determine a sanitized base name: first_name_empId_date
     const rawFirstName =
-      (profileRow?.[0]?.first_name) ||
+      profileRow?.[0]?.first_name ||
       current_user.first_name ||
       `emp${current_user.EMP_ID}`;
     const sanitize = (s) =>
@@ -455,7 +466,9 @@ export async function updateProfilePhoto(req, res) {
         .toLowerCase()
         .replace(/\s+/g, "_")
         .replace(/[^a-z0-9_\-]/g, "");
-    const baseName = `${sanitize(rawFirstName)}_${current_user.EMP_ID}_${Date.now()}`;
+    const baseName = `${sanitize(rawFirstName)}_${
+      current_user.EMP_ID
+    }_${Date.now()}`;
 
     let newFileName;
 
@@ -475,7 +488,9 @@ export async function updateProfilePhoto(req, res) {
     // 1) If file uploaded via multer (req.file)
     if (req.file) {
       const file = req.file;
-      const srcPath = file.path || (file.destination ? path.join(file.destination, file.filename) : null);
+      const srcPath =
+        file.path ||
+        (file.destination ? path.join(file.destination, file.filename) : null);
 
       const ext = extFrom(file.originalname, file.mimetype);
       newFileName = `${baseName}${ext}`;
@@ -498,7 +513,10 @@ export async function updateProfilePhoto(req, res) {
         if (file.buffer) {
           await fs.writeFile(destPath, file.buffer);
         } else {
-          return res.status(400).json({ success: false, message: "Uploaded file missing path/buffer" });
+          return res.status(400).json({
+            success: false,
+            message: "Uploaded file missing path/buffer",
+          });
         }
       }
     }
@@ -512,7 +530,9 @@ export async function updateProfilePhoto(req, res) {
       const destPath = path.join(uploadsDir, newFileName);
       await fs.writeFile(destPath, Buffer.from(base64, "base64"));
     } else {
-      return res.status(400).json({ success: false, message: "No photo provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No photo provided" });
     }
 
     // Update DB with new filename
@@ -529,9 +549,15 @@ export async function updateProfilePhoto(req, res) {
       });
     }
 
-    return res.json({ success: true, message: "Profile photo updated successfully", photo: newFileName });
+    return res.json({
+      success: true,
+      message: "Profile photo updated successfully",
+      photo: newFileName,
+    });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ success: false, message: e?.message || "Server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: e?.message || "Server error" });
   }
 }
