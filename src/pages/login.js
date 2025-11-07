@@ -50,7 +50,7 @@ export function registerLoginRoute(app) {
       return res.json({
         success: true,
         token,
-        user: { ...userData, user_role_name, da_percentage: da_percent },
+        user: { ...userData, user_role_name, da_percentage: da_percent, dept_id: user_role_name_query[0]?.dept_id || null },
         // ...other fields
       });
     } catch (e) {
