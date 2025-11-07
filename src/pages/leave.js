@@ -62,7 +62,10 @@ export async function editLeave(req, res) {
       .where(eq(leave.id, id))
       .limit(1);
 
-    if (!existingLeave.length || parseInt(existingLeave[0].EMP_ID) !== parseInt(EMP_ID)) {
+    if (
+      !existingLeave.length ||
+      parseInt(existingLeave[0].EMP_ID) !== parseInt(EMP_ID)
+    ) {
       return res.status(404).json({ error: "Leave not found or unauthorized" });
     }
 
@@ -101,10 +104,7 @@ export async function editLeave(req, res) {
     }
 
     // Perform update
-    await db
-      .update(leave)
-      .set(updates)
-      .where(eq(leave.id, id));
+    await db.update(leave).set(updates).where(eq(leave.id, id));
 
     res.json({ success: true, message: "Leave updated successfully" });
   } catch (e) {
@@ -171,10 +171,7 @@ export async function cancelLeave(req, res) {
     }
 
     // Update the leave to set cancel = 1
-    await db
-      .update(leave)
-      .set({ cancel: 1 })
-      .where(eq(leave.id, id));
+    await db.update(leave).set({ cancel: 1 }).where(eq(leave.id, id));
 
     res.json({ success: true, message: "Leave cancelled successfully" });
   } catch (e) {
@@ -182,12 +179,13 @@ export async function cancelLeave(req, res) {
   }
 }
 
-
 // Superadmin views pending leaves for their department
 export async function getPendingLeaves(req, res) {
   const emp_id = req.user?.EMP_ID;
   if (!emp_id) {
-    return res.status(401).json({ error: "Unauthorized: No employee ID found" });
+    return res
+      .status(401)
+      .json({ error: "Unauthorized: No employee ID found" });
   }
 
   // Get department ID for the user
@@ -235,11 +233,7 @@ export async function getPendingLeaves(req, res) {
   try {
     // Only pending leaves for employees in the same department
     const whereExpr = dateWhere
-      ? and(
-          eq(leave.status, 0),
-          eq(empDeptMaster.dept_id, dept_id),
-          dateWhere
-        )
+      ? and(eq(leave.status, 0), eq(empDeptMaster.dept_id, dept_id), dateWhere)
       : and(eq(leave.status, 0), eq(empDeptMaster.dept_id, dept_id));
 
     const leaves = await db
@@ -1000,57 +994,79 @@ export async function getPGLeaves(req, res) {
   }
 }
 
-
 export async function getRemainingLeaves(req, res) {
-  const EMP_ID = req.user.EMP_ID;
-  const { type } = req.query;
-  if (!EMP_ID || !type) {
-    return res.status(400).json({ error: "EMP_ID and type required" });
-  }
-
-  let maxAllowed = 0, count = 0, remaining = 0;
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-
-  if (type === "CL" || type === "OD") {
-    maxAllowed = 20;
-    count = await db
-      .select()
-      .from(leave)
-      .where(
-        and(
-          eq(leave.EMP_ID, EMP_ID),
-          eq(leave.LTYPE, type),
-          gte(leave.LFROM, `${year}-04-01`), // assuming FY starts April
-          lte(leave.LFROM, `${year + 1}-03-31`)
-        )
-      );
-    remaining = maxAllowed - count.length;
-    if (remaining <= 0) {
-      return res.status(400).json({ error: "No remaining leaves available" });
+  try {
+    const EMP_ID = Number(req.user?.EMP_ID);
+    const rawType = (req.query?.type ?? "").toString().trim().toUpperCase();
+    if (!EMP_ID || !rawType) {
+      return res.status(400).json({ error: "EMP_ID and type required" });
     }
-    return res.json({ type, remaining });
-  } else if (type === "PER") {
-    maxAllowed = 2;
-    count = await db
-      .select()
-      .from(leave)
-      .where(
-        and(
-          eq(leave.EMP_ID, EMP_ID),
-          eq(leave.LTYPE, type),
-          sql`MONTH(${leave.LFROM}) = ${month}`,
-          sql`YEAR(${leave.LFROM}) = ${year}`
-        )
-      );
-    remaining = maxAllowed - count.length;
-    if (remaining <= 0) {
-      return res.status(400).json({ error: "No remaining leaves available" });
+    const type = rawType;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1; // 1-12
+
+    // Fiscal year starts on April 1st: determine fiscal start year
+    const fiscalStartYear = month >= 4 ? year : year - 1;
+    const fiscalStart = `${fiscalStartYear}-04-01`;
+    const fiscalEnd = `${fiscalStartYear + 1}-03-31`;
+
+    let remaining = 0;
+
+    if (type === "CL") {
+      const maxAllowed = 12;
+      // SUM TOTAL within fiscal year (LFROM used to bucket into FY)
+      const rows = await db
+        .select({ used: sql`COALESCE(SUM(${leave.TOTAL}), 0)` })
+        .from(leave)
+        .where(
+          and(
+            eq(leave.EMP_ID, EMP_ID),
+            eq(leave.LTYPE, type),
+            gte(leave.LFROM, fiscalStart),
+            lte(leave.LFROM, fiscalEnd)
+          )
+        );
+      const used = Number(rows?.[0]?.used ?? 0);
+      remaining = Math.max(0, maxAllowed - used);
+      return res.json({ type, remaining });
+    } else if (type === "PER") {
+      const maxAllowed = 2;
+      const rows = await db
+        .select({ cnt: sql`COALESCE(COUNT(*), 0)` })
+        .from(leave)
+        .where(
+          and(
+            eq(leave.EMP_ID, EMP_ID),
+            eq(leave.LTYPE, type),
+            sql`MONTH(${leave.LFROM}) = ${month}`
+          )
+        );
+      const used = Number(rows?.[0]?.cnt ?? 0);
+      remaining = Math.max(0, maxAllowed - used);
+      return res.json({ type, remaining });
+    } else if (type === "OD") {
+      const maxAllowed = 20;
+      const rows = await db
+        .select({ used: sql`COALESCE(SUM(${leave.TOTAL}), 0)` })
+        .from(leave)
+        .where(
+          and(
+            eq(leave.EMP_ID, EMP_ID),
+            eq(leave.LTYPE, type),
+            gte(leave.LFROM, fiscalStart),
+            lte(leave.LFROM, fiscalEnd)
+          )
+        );
+      const used = Number(rows?.[0]?.used ?? 0);
+      remaining = Math.max(0, maxAllowed - used);
+      return res.json({ type, remaining });
+    } else {
+      return res.json({ type, remaining: "No constraints" });
     }
-    return res.json({ type, remaining });
-  } else {
-    // For other leave types, no constraints
-    return res.json({ type, remaining: "No constraints" });
+  } catch (e) {
+    console.error("Error in getRemainingLeaves:", e);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
