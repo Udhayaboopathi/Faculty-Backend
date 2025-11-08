@@ -819,10 +819,11 @@ export const getPayrollStatementAdmin = async (req, res) => {
         REC_COMM: sql`IFNULL(${pay.BANKLOAN}, 0)`,
         RLFv: pay.HDFC,
         OTHERS: pay.OTHERS,
+        QUARENT: pay.QUARENT,
         TOTAL_DED: sql`
           IF(${pay.PFSUB} = 0, ${pay.CPSSUB}, ${pay.PFSUB})
           + ${pay.FBF} + ${pay.SPLPF} + ${pay.LIC} + ${pay.ITAX} + ${pay.PTAX} + ${pay.HFUND}
-          + IFNULL(${pay.BANKLOAN}, 0) + IFNULL(${pay.HDFC}, 0) + ${pay.OTHERS}
+          + IFNULL(${pay.BANKLOAN}, 0) + IFNULL(${pay.HDFC}, 0) + ${pay.OTHERS} + ${pay.QUARENT}
         `,
         Daarra: pay.Daarra,
         Daarrb: pay.Daarrb,
@@ -860,6 +861,7 @@ export const getPayrollStatementAdmin = async (req, res) => {
           REC_COMM: 0,
           RLF: 0,
           OTHERS_IF_ANY: 0,
+          QUARENT: 0,
           TOTAL_DEDUCTION: 0,
         });
       }
@@ -883,6 +885,7 @@ export const getPayrollStatementAdmin = async (req, res) => {
       row.REC_COMM += NN(r.REC_COMM);
       row.RLF += NN(r.RLFv);
       row.OTHERS_IF_ANY += NN(r.OTHERS);
+      row.QUARENT += NN(r.QUARENT);
 
       row.TOTAL_DEDUCTION += NN(r.TOTAL_DED);
     }
@@ -981,6 +984,7 @@ export const getPayrollStatementAdmin = async (req, res) => {
           "REC_COMM",
           "RLF",
           "OTHERS_IF_ANY",
+          "QUARENT",
         ].forEach(add);
         t.TOTAL_DEDUCTION = (t.TOTAL_DEDUCTION ?? 0) + NN(r.TOTAL_DEDUCTION);
         return t;
@@ -1041,10 +1045,11 @@ export const getPayrollStatementUser = async (req, res) => {
         REC_COMM: sql`IFNULL(${pay.BANKLOAN}, 0)`,
         RLFv: pay.HDFC,
         OTHERS: pay.OTHERS,
+        QUARENT: pay.QUARENT,
         TOTAL_DED: sql`
           IF(${pay.PFSUB} = 0, ${pay.CPSSUB}, ${pay.PFSUB})
           + ${pay.FBF} + ${pay.SPLPF} + ${pay.LIC} + ${pay.ITAX} + ${pay.PTAX} + ${pay.HFUND}
-          + IFNULL(${pay.BANKLOAN}, 0) + IFNULL(${pay.HDFC}, 0) + ${pay.OTHERS}
+          + IFNULL(${pay.BANKLOAN}, 0) + IFNULL(${pay.HDFC}, 0) + ${pay.OTHERS} + ${pay.QUARENT}
         `,
         Daarra: pay.Daarra,
         Daarrb: pay.Daarrb,
@@ -1082,6 +1087,7 @@ export const getPayrollStatementUser = async (req, res) => {
           REC_COMM: 0,
           RLF: 0,
           OTHERS_IF_ANY: 0,
+          QUARENT: 0,
           TOTAL_DEDUCTION: 0,
         });
       }
@@ -1105,6 +1111,7 @@ export const getPayrollStatementUser = async (req, res) => {
       row.REC_COMM += NN(r.REC_COMM);
       row.RLF += NN(r.RLFv);
       row.OTHERS_IF_ANY += NN(r.OTHERS);
+      row.QUARENT += NN(r.QUARENT);
 
       row.TOTAL_DEDUCTION += NN(r.TOTAL_DED);
     }
@@ -1203,6 +1210,7 @@ export const getPayrollStatementUser = async (req, res) => {
           "REC_COMM",
           "RLF",
           "OTHERS_IF_ANY",
+          "QUARENT",
         ].forEach(add);
         t.TOTAL_DEDUCTION = (t.TOTAL_DEDUCTION ?? 0) + NN(r.TOTAL_DEDUCTION);
         return t;
