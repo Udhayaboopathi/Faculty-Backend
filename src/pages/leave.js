@@ -1040,6 +1040,7 @@ export async function getRemainingLeaves(req, res) {
           and(
             eq(leave.EMP_ID, EMP_ID),
             eq(leave.LTYPE, type),
+            sql`YEAR(${leave.LFROM}) = ${year}`,
             sql`MONTH(${leave.LFROM}) = ${month}`
           )
         );
