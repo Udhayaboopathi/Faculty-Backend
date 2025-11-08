@@ -935,59 +935,35 @@ export async function dropdownDeptStaffs(req, res) {
 export async function getPGLeaves(req, res) {
   try {
     const empId = req.user?.EMP_ID;
-    if (!empId)
-      return res.status(401).json({ error: "Unauthorized: no EMP_ID" });
-    if (Number(empId) !== 214)
-      return res.status(401).json({ error: "Unauthorized" });
+    if (!empId) return res.status(401).json({ error: "Unauthorized: no EMP_ID" });
+    if (Number(empId) !== 214) return res.status(401).json({ error: "Unauthorized" });
 
-    // Exclude admin (214) at the source
-    const employees = await db
+    // Fetch all leaves for PG employees (place = 2), exclude admin (id = 214)
+    const rows = await db
       .select({
-        emp_id: employeeMaster.id,
-        full_name: sql`
-          TRIM(CONCAT_WS(' ', ${employeeMaster.first_name}, ${employeeMaster.last_name}))
-        `.as("full_name"),
+        id: leave.id,
+        EMP_ID: leave.EMP_ID,
+        LTYPE: leave.LTYPE,
+        LFROM: leave.LFROM,
+        LTO: leave.LTO,
+        INCHARGE: leave.INCHARGE,
+        RESON: leave.RESON,
+        TOTAL: leave.TOTAL,
+        status: leave.status,
+        Daytype: leave.Daytype,
+        Session: leave.Session,
+        Timing: leave.Timing,
+        cancel: leave.cancel,
+        cancel_reason: leave.cancel_reason,
+        employeeName: sql`TRIM(CONCAT_WS(' ', ${employeeMaster.first_name}, ${employeeMaster.last_name}))`,
+        employeeCode: employeeMaster.emp_id,
       })
-      .from(employeeMaster)
-      .where(
-        and(
-          eq(employeeMaster.place, 2), // PG campus
-          ne(employeeMaster.id, 214) // exclude admin entirely
-        )
-      );
+      .from(leave)
+      .leftJoin(employeeMaster, eq(employeeMaster.id, leave.EMP_ID))
+      .where(and(eq(employeeMaster.place, 2), ne(employeeMaster.id, 214)))
+      .orderBy(asc(leave.LFROM));
 
-    const result = await Promise.all(
-      employees.map(async (emp) => {
-        const leaves = await db
-          .select({
-            id: leave.id,
-            emp_id: leave.EMP_ID,
-            leave_type: leave.LTYPE,
-            start_date: leave.LFROM,
-            end_date: leave.LTO,
-            incharge: leave.INCHARGE,
-            reason: leave.RESON,
-            total: leave.TOTAL,
-            status: leave.status,
-            day_type: leave.Daytype,
-            session: leave.Session,
-            timing: leave.Timing,
-            cancel: leave.cancel,
-            cancel_reason: leave.cancel_reason,
-          })
-          .from(leave)
-          .where(eq(leave.EMP_ID, emp.emp_id)) // no need to exclude 214 again
-          .orderBy(asc(leave.LFROM));
-
-        return {
-          emp_id: emp.emp_id,
-          name: emp.full_name,
-          leaves,
-        };
-      })
-    );
-
-    return res.status(200).json(result);
+    return res.status(200).json({ success: true, count: rows.length, leaves: rows });
   } catch (e) {
     console.error("Error in getPGLeaves:", e);
     return res.status(500).json({ error: "Internal server error" });

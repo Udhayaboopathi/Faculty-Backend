@@ -380,6 +380,8 @@ export const bulkUploadPay = async (req, res) => {
         splalb,
         Daarra,
         DaArrb,
+        payband,
+        designation,
         SevenArr,
         SurLeaveSalary,
         PromoArr,
@@ -446,8 +448,6 @@ export const bulkUploadPay = async (req, res) => {
         .where(eq(employeeMaster.id, empId))
         .limit(1);
 
-      const payband = empData[0]?.payband ?? null;
-      const designation = empData[0]?.designation ?? "";
 
       const row = {
         emp_id: empId,
