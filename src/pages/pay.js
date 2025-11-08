@@ -307,7 +307,7 @@ export const postPayDetails = async (req, res) => {
       other_all: N(other_all),
 
       payband,
-      designation,
+      Designation: designation, // Fixed: Use capital D to match schema
     };
 
     await db.insert(pay).values(row);
@@ -496,7 +496,7 @@ export const bulkUploadPay = async (req, res) => {
         Pongal_Bonus: N(Pongal_Bonus),
         other_all: N(other_all),
         payband,
-        designation,
+        Designation: designation, // Fixed: Use capital D to match schema
       };
 
       try {
@@ -654,7 +654,7 @@ export const editPayDetails = async (req, res) => {
 
     if (payband !== undefined) setIfProvided("payband", payband);
     if (designation !== undefined)
-      setIfProvided("designation", designation ?? "");
+      setIfProvided("Designation", designation ?? ""); // Fixed: Use capital D to match schema
 
     if (Object.keys(updateRow).length === 0) {
       return res.json({
