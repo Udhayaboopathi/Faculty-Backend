@@ -15,8 +15,8 @@ jobs:
 
       - name: Add EC2 host to known_hosts
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          mkdir -p $HOME/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> $HOME/.ssh/known_hosts
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v0.1.10
@@ -25,4 +25,5 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            /home/ubuntu/deploy.sh
+            echo "🚀 Starting deployment on EC2..."
+            bash /home/ubuntu/deploy.sh
