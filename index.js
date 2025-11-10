@@ -431,7 +431,7 @@ app.get("/me", authMiddleware, (req, res) => {
 // Root API endpoint
 app.get("/", (req, res) => {
   res.json({
-    message: "Faculty Backend API",
+    message: "IT me Udhaya ",
     version: "1.0.0",
     status: "running",
     documentation: "/api-docs",
