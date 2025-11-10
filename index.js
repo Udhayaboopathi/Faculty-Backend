@@ -29,7 +29,7 @@ import {
   updateExperience,
   updateProfile,
   updateProfilePhoto,
-  updateQualification
+  updateQualification,
 } from "./src/pages/profile.js";
 
 import {
@@ -38,7 +38,7 @@ import {
   deletePublication,
   editPublication,
   getPublication,
-  uploadPublication
+  uploadPublication,
 } from "./src/pages/publication.js";
 
 import {
@@ -108,34 +108,41 @@ app.use(
 );
 
 // Custom morgan format: IP | STATUS | PATH | TIME
-morgan.token('real-ip', (req) => {
-  return req.headers['x-real-ip'] || 
-         req.headers['x-forwarded-for'] || 
-         req.connection.remoteAddress || 
-         req.socket.remoteAddress ||
-         req.ip;
+morgan.token("real-ip", (req) => {
+  return (
+    req.headers["x-real-ip"] ||
+    req.headers["x-forwarded-for"] ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    req.ip
+  );
 });
 
 // Logger middleware - logs IP, Status Code, Path, and Response Time
-app.use(morgan(':real-ip :method :url :status :response-time ms', {
-  stream: {
-    write: (message) => {
-      // Remove trailing newline and colorize output
-      const msg = message.trim();
-      const parts = msg.split(' ');
-      const status = parts[3];
-      
-      // Color code based on status
-      let color = '\x1b[0m'; // default
-      if (status && status.startsWith('2')) color = '\x1b[32m'; // green for 2xx
-      else if (status && status.startsWith('3')) color = '\x1b[36m'; // cyan for 3xx
-      else if (status && status.startsWith('4')) color = '\x1b[33m'; // yellow for 4xx
-      else if (status && status.startsWith('5')) color = '\x1b[31m'; // red for 5xx
-      
-      console.log(color + msg + '\x1b[0m');
-    }
-  }
-}));
+app.use(
+  morgan(":real-ip :method :url :status :response-time ms", {
+    stream: {
+      write: (message) => {
+        // Remove trailing newline and colorize output
+        const msg = message.trim();
+        const parts = msg.split(" ");
+        const status = parts[3];
+
+        // Color code based on status
+        let color = "\x1b[0m"; // default
+        if (status && status.startsWith("2"))
+          color = "\x1b[32m"; // green for 2xx
+        else if (status && status.startsWith("3"))
+          color = "\x1b[36m"; // cyan for 3xx
+        else if (status && status.startsWith("4"))
+          color = "\x1b[33m"; // yellow for 4xx
+        else if (status && status.startsWith("5")) color = "\x1b[31m"; // red for 5xx
+
+        console.log(color + msg + "\x1b[0m");
+      },
+    },
+  })
+);
 
 app.use(express.json());
 
@@ -167,10 +174,7 @@ registerLoginRoute(app);
 // Dropdown Values
 app.get("/dropdown/colleges", authMiddleware, async (req, res) => {
   try {
-    const rows = await db
-      .select()
-      .from(college)
-      .orderBy(college.Name);
+    const rows = await db.select().from(college).orderBy(college.Name);
     res.json({ colleges: rows });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -186,15 +190,17 @@ app.get("/dropdown/departments", authMiddleware, async (req, res) => {
   }
 });
 
-
-
 app.get(
   "/dropdown/deptstaffs",
   authMiddleware,
   leaveController.dropdownDeptStaffs
 );
 
-app.get("/dropdown/financialyears", authMiddleware, payController.getPayFinancialYears);
+app.get(
+  "/dropdown/financialyears",
+  authMiddleware,
+  payController.getPayFinancialYears
+);
 
 // Leave portal routes
 app.get("/leave/all", authMiddleware, leaveController.getAllLeaves); // admin only
@@ -217,13 +223,15 @@ app.get("/leave/remaining", authMiddleware, leaveController.getRemainingLeaves);
 
 app.put("/auth/changepassword", authMiddleware, changePassword);
 
-
 // Profile (Personal Information)
 app.get("/dashboard/profile", authMiddleware, getProfile);
 app.put("/dashboard/profile", authMiddleware, updateProfile);
-app.put("/dashboard/profile/photo", authMiddleware,
-  upload.single('photo'),
-  updateProfilePhoto);
+app.put(
+  "/dashboard/profile/photo",
+  authMiddleware,
+  upload.single("photo"),
+  updateProfilePhoto
+);
 
 // Webpages
 app.get("/dashboard/webpages", authMiddleware, webpages.getWebpages);
@@ -233,16 +241,26 @@ app.delete("/dashboard/webpages/:id", authMiddleware, webpages.deleteWebpage);
 
 // Consultancy
 app.get("/dashboard/consultancy", authMiddleware, consultancy.getConsultancies);
-app.post("/dashboard/consultancy", authMiddleware, consultancy.createConsultancy);
-app.put("/dashboard/consultancy/:id", authMiddleware, consultancy.editConsultancy);
-app.delete("/dashboard/consultancy/:id", authMiddleware, consultancy.deleteConsultancy);
-
+app.post(
+  "/dashboard/consultancy",
+  authMiddleware,
+  consultancy.createConsultancy
+);
+app.put(
+  "/dashboard/consultancy/:id",
+  authMiddleware,
+  consultancy.editConsultancy
+);
+app.delete(
+  "/dashboard/consultancy/:id",
+  authMiddleware,
+  consultancy.deleteConsultancy
+);
 
 // Qualification routes
 app.post("/dashboard/qualification", authMiddleware, addQualification);
 app.put("/dashboard/qualification/:id", authMiddleware, updateQualification);
 app.delete("/dashboard/qualification/:id", authMiddleware, deleteQualification);
-
 
 app.post("/dashboard/experience", authMiddleware, addExperience);
 app.put("/dashboard/experience", authMiddleware, updateExperience);
@@ -303,7 +321,7 @@ app.delete("/dashboard/publication/:id", authMiddleware, deletePublication);
 app.post(
   "/dashboard/publication/upload",
   authMiddleware,
-  upload.single('bibtex'),
+  upload.single("bibtex"),
   uploadPublication
 );
 
@@ -323,21 +341,40 @@ app.delete("/dashboard/patent/:id", authMiddleware, deletePatent);
 
 // Pay routes
 app.get("/dashboard/pay", authMiddleware, payController.getPayDetails);
-app.get("/dashboard/pay/admin", authMiddleware, payController.getPayDetailsAdmin);
+app.get(
+  "/dashboard/pay/admin",
+  authMiddleware,
+  payController.getPayDetailsAdmin
+);
 app.post("/dashboard/pay", authMiddleware, payController.postPayDetails);
 app.post("/dashboard/pay/bulk", authMiddleware, payController.bulkUploadPay);
 app.put("/dashboard/pay", authMiddleware, payController.editPayDetails); // allow both POST and PUT for upsert
-app.get("/dashboard/paydrawn/admin", authMiddleware, payController.getPayrollStatementAdmin);
-app.get("/dashboard/paydrawn", authMiddleware, payController.getPayrollStatementUser);
+app.get(
+  "/dashboard/paydrawn/admin",
+  authMiddleware,
+  payController.getPayrollStatementAdmin
+);
+app.get(
+  "/dashboard/paydrawn",
+  authMiddleware,
+  payController.getPayrollStatementUser
+);
 
 // it_form routes
 
-app.get("/dashboard/it_form", authMiddleware, it_formController.getSalaryTaxStatement);
-
+app.get(
+  "/dashboard/it_form",
+  authMiddleware,
+  it_formController.getSalaryTaxStatement
+);
 
 // settings routes
 
-app.put("/settings/da_percentage", authMiddleware, payController.setDaPercentage);
+app.put(
+  "/settings/da_percentage",
+  authMiddleware,
+  payController.setDaPercentage
+);
 
 // server
 app.get("/leave/:id", authMiddleware, async (req, res) => {
@@ -402,11 +439,11 @@ app.get("/", (req, res) => {
       health: "/health",
       login: {
         teaching: "/login/teaching",
-        nonTeaching: "/login/non-teaching"
+        nonTeaching: "/login/non-teaching",
       },
       dashboard: "/dashboard/*",
-      swagger: "/api-docs"
-    }
+      swagger: "/api-docs",
+    },
   });
 });
 
