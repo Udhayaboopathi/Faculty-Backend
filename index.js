@@ -391,6 +391,25 @@ app.get("/me", authMiddleware, (req, res) => {
   res.json({ user: req.user });
 });
 
+// Root API endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "Faculty Backend API",
+    version: "1.0.0",
+    status: "running",
+    documentation: "/api-docs",
+    endpoints: {
+      health: "/health",
+      login: {
+        teaching: "/login/teaching",
+        nonTeaching: "/login/non-teaching"
+      },
+      dashboard: "/dashboard/*",
+      swagger: "/api-docs"
+    }
+  });
+});
+
 // Serve React static files (build folder) - AFTER all API routes
 // Make sure your React build is in the 'build' or 'dist' folder
 app.use(express.static(path.join(__dirname, "build")));
